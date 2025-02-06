@@ -55,7 +55,7 @@ const DayView = () => {
   };
 
   const handleDragStart = (e, event) => {
-    e.stopPropagation(); // Stop event from bubbling up to the grid
+    e.stopPropagation();
     dragItem.current = event;
     dragNode.current = e.target;
     e.dataTransfer.setData('text/plain', '');
@@ -80,7 +80,6 @@ const DayView = () => {
   const handleResize = (e) => {
     if (!resizingEvent) return;
     
-    // Find all time-grid elements and get the first one
     const gridElement = document.querySelector('.time-grid');
     if (!gridElement) return;
     
@@ -104,9 +103,10 @@ const DayView = () => {
     <div
       draggable
       onDragStart={(e) => handleDragStart(e, event)}
-      className={`absolute left-8 right-2 rounded-md text-sm group event-item
+      className={`absolute right-2 rounded-md text-sm group event-item
         ${event.type === 'work' ? 'bg-green-900/50 border-l-4 border-green-700' : 'bg-blue-900/50 border-l-4 border-blue-700'}`}
       style={{
+        left: '0',
         top: `${event.start * 4}rem`,
         height: `${(event.end - event.start) * 4}rem`
       }}
@@ -140,7 +140,6 @@ const DayView = () => {
         ) : (
           <div className="flex flex-col">
             {(event.end - event.start) <= 0.5 ? (
-              // Compact layout for events 30 minutes or shorter
               <div className="flex justify-between items-baseline">
                 <div className="flex items-baseline gap-2 min-w-0">
                   <span 
@@ -165,7 +164,6 @@ const DayView = () => {
                 </button>
               </div>
             ) : (
-              // Original two-line layout for events longer than 30 minutes
               <>
                 <div className="flex justify-between items-start">
                   <span 
@@ -205,10 +203,8 @@ const DayView = () => {
       </div>
     </div>
   );
-
   const TimeGrid = ({ columnIndex }) => {
     const handleMouseDown = (e) => {
-      // Don't start drag creation if clicking on an event
       if (e.target.closest('.event-item')) return;
       
       const rect = e.currentTarget.getBoundingClientRect();
@@ -225,7 +221,6 @@ const DayView = () => {
     const handleMouseMove = (e) => {
       if (!dragCreating) return;
       
-      // Don't update drag creation if we're over an event
       if (e.target.closest('.event-item')) return;
       
       const rect = e.currentTarget.getBoundingClientRect();
@@ -244,7 +239,7 @@ const DayView = () => {
       const start = Math.min(dragCreating.startTime, dragCreating.endTime);
       const end = Math.max(dragCreating.startTime, dragCreating.endTime);
       
-      if (end - start >= 0.25) { // Only create if drag is at least 15 minutes
+      if (end - start >= 0.25) {
         const newEvent = {
           id: Date.now().toString(),
           title: "New Event",
@@ -261,52 +256,67 @@ const DayView = () => {
 
     return (
       <div 
-        className={`relative flex-1 min-w-[200px] time-grid border-l border-gray-700 h-full ${dragCreating ? 'select-none' : ''}`}
+        className="relative flex-1 min-w-[200px] time-grid border-l border-gray-700 h-full grid-container"
         onDragOver={(e) => handleDrag(e, columnIndex)}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        <div className="h-16 border-t border-gray-700 relative" /> {/* Empty first hour div without label */}
-        {Array.from({ length: 23 }, (_, i) => (
-          <div 
-            key={i + 1}
-            className="h-16 border-t border-gray-700 relative"
-            onClick={() => {
-              const newEvent = {
-                id: Date.now().toString(),
-                title: "New Event",
-                type: "work",
-                start: i + 1,
-                end: i + 2,
-                column: columnIndex
-              };
-              setEvents(prev => [...prev, newEvent]);
-              pushToHistory([...events, newEvent]);
-            }}
-          >
-            <div className="absolute left-2 -top-3 text-xs text-gray-400">
-              {`${(i + 1).toString().padStart(2, '0')}:00`}
+        {/* Time labels container */}
+        <div className="absolute left-0 w-12 h-full select-none">
+          <div className="h-16" /> {/* Empty first hour div */}
+          {Array.from({ length: 23 }, (_, i) => (
+            <div 
+              key={i + 1}
+              className="h-16 border-t border-gray-700 relative"
+            >
+              <div className="absolute left-2 -top-3 text-xs text-gray-400">
+                {`${(i + 1).toString().padStart(2, '0')}:00`}
+              </div>
             </div>
-          </div>
-        ))}
-        
-        {events
-          .filter(event => event.column === columnIndex)
-          .map(event => (
-            <EventComponent key={event.id} event={event} />
           ))}
+        </div>
 
-        {dragCreating && dragCreating.column === columnIndex && (
-          <div
-            className="absolute left-8 right-2 bg-blue-900/30 border border-blue-500/50 rounded pointer-events-none"
-            style={{
-              top: `${Math.min(dragCreating.startTime, dragCreating.endTime) * 4}rem`,
-              height: `${Math.abs(dragCreating.endTime - dragCreating.startTime) * 4}rem`
-            }}
-          />
-        )}
+        {/* Content area for events */}
+        <div className="absolute left-12 right-0 h-full">
+          <div className="h-16 border-t border-gray-700 relative" />
+          {Array.from({ length: 23 }, (_, i) => (
+            <div 
+              key={i + 1}
+              className="h-16 border-t border-gray-700 relative"
+              onClick={() => {
+                const newEvent = {
+                  id: Date.now().toString(),
+                  title: "New Event",
+                  type: "work",
+                  start: i + 1,
+                  end: i + 2,
+                  column: columnIndex
+                };
+                setEvents(prev => [...prev, newEvent]);
+                pushToHistory([...events, newEvent]);
+              }}
+            />
+          ))}
+          
+          {events
+            .filter(event => event.column === columnIndex)
+            .map(event => (
+              <EventComponent key={event.id} event={event} />
+            ))}
+
+          {dragCreating && dragCreating.column === columnIndex && (
+            <div
+              className="absolute right-2 bg-blue-900/30 border border-blue-500/50 rounded pointer-events-none"
+              style={{
+                left: '0',
+                top: `${Math.min(dragCreating.startTime, dragCreating.endTime) * 4}rem`,
+                height: `${Math.abs(dragCreating.endTime - dragCreating.startTime) * 4}rem`
+              }}
+            />
+          )}
+        </div>
       </div>
     );
   };
@@ -328,7 +338,6 @@ const DayView = () => {
     };
 
     const handleKeyDown = (e) => {
-      // Check for undo (Cmd/Ctrl + Z)
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         if (historyIndex > 0) {
@@ -337,7 +346,6 @@ const DayView = () => {
         }
       }
       
-      // Check for redo (Cmd/Ctrl + Shift + Z)
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
         e.preventDefault();
         if (historyIndex < history.length - 1) {
@@ -352,7 +360,6 @@ const DayView = () => {
       document.addEventListener('mouseup', handleMouseUp);
     }
 
-    // Add keyboard event listener
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
@@ -367,7 +374,7 @@ const DayView = () => {
       <div className="bg-gray-800 border border-gray-700 rounded-lg h-full flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button 
+          <Button 
               variant="ghost"
               onClick={() => {
                 const newDate = new Date(date);
