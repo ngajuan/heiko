@@ -1,8 +1,14 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Description 
+Heikō is the Japanese word for balance, equilibrium. Ideally, this tool can help with bringing balance to how we plan our days. 
+
+You can use Heikō to compare and contrast different versions of what your day looks like instead of limiting yourself to one concept. Use the fluid movements of your mouse to create these time blocks. 
+
 ## Getting Started
 
-First, run the development server:
+First, clone the repository. 
+Then run the development server: 
 
 ```bash
 npm run dev
@@ -14,7 +20,8 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. 
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
