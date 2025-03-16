@@ -293,138 +293,140 @@ const DayView: React.FC = () => {
     columnIndex: number;
   }
 
-  const TimeGrid: React.FC<TimeGridProps> = ({ columnIndex }) => {
-    const handleMouseDown = (e: React.MouseEvent): void => {
-      if (e.target instanceof Element && e.target.closest('.event-item')) return;
-      
-      const rect = e.currentTarget.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const startTime = getTimeFromY(y);
-      
-      setDragCreating({
-        startTime,
-        endTime: startTime,
-        column: columnIndex
-      });
-    };
-
-    const handleMouseMove = (e: React.MouseEvent): void => {
-      if (!dragCreating) return;
-      
-      if (e.target instanceof Element && e.target.closest('.event-item')) return;
-      
-      const rect = e.currentTarget.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const currentTime = Math.max(0, Math.min(24, getTimeFromY(y)));
-      
-      setDragCreating(prev => prev ? {
-        ...prev,
-        endTime: currentTime
-      } : null);
-    };
-
-    const handleMouseUp = (): void => {
-      if (!dragCreating) return;
-
-      const start = Math.min(dragCreating.startTime, dragCreating.endTime);
-      const end = Math.max(dragCreating.startTime, dragCreating.endTime);
-      
-      if (end - start >= 0.25) {
-        const newEvent: CalendarEvent = {
-          id: Date.now().toString(),
-          title: "New Event",
-          type: "work",
-          start,
-          end,
-          column: columnIndex,
-          description: ""
-        };
-        const updatedEvents = [...events, newEvent];
-        setEvents(updatedEvents);
-        pushToHistory(updatedEvents);
-        setSelectedEvent(newEvent);
-      }
-      setDragCreating(null);
-    };
-
-    return (
-      <div 
-        className="relative flex-1 min-w-[200px] time-grid border-l border-gray-700 h-full grid-container"
-        onDragOver={(e) => handleDrag(e, columnIndex)}
-        onDrop={() => {
-          dragItem.current = null;
-          dragNode.current = null;
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      >
-        {/* Time labels container */}
-        <div className="absolute left-0 w-12 h-full select-none">
-          <div className="h-16" /> {/* Empty first hour div */}
-          {Array.from({ length: 23 }, (_, i) => (
-            <div 
-              key={i + 1}
-              className="h-16 border-t border-gray-700 relative"
-            >
-              <div className="absolute left-2 -top-3 text-xs text-gray-400">
-                {`${(i + 1).toString().padStart(2, '0')}:00`}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Content area for events */}
-        <div className="absolute left-12 right-0 h-full">
-          <div className="h-16 border-t border-gray-700 relative" />
-          {Array.from({ length: 23 }, (_, i) => (
-            <div 
-              key={i + 1}
-              className="h-16 border-t border-gray-700 relative"
-              onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                  const newEvent: CalendarEvent = {
-                    id: Date.now().toString(),
-                    title: "New Event",
-                    type: "work",
-                    start: i + 1,
-                    end: i + 2,
-                    column: columnIndex,
-                    description: ""
-                  };
-                  const updatedEvents = [...events, newEvent];
-                  setEvents(updatedEvents);
-                  pushToHistory(updatedEvents);
-                  setSelectedEvent(newEvent);
-                }
-              }}
-            />
-          ))}
-          
-          {events
-            .filter(event => event.column === columnIndex)
-            .map(event => (
-              <EventComponent key={event.id} event={event} />
-            ))}
-
-          {dragCreating && dragCreating.column === columnIndex && (
-            <div
-              className="absolute right-2 bg-blue-900/30 border border-blue-500/50 rounded pointer-events-none"
-              style={{
-                left: '0',
-                top: `${Math.min(dragCreating.startTime, dragCreating.endTime) * 4}rem`,
-                height: `${Math.abs(dragCreating.endTime - dragCreating.startTime) * 4}rem`
-              }}
-            />
-          )}
-        </div>
-      </div>
-    );
+  // Update the TimeGrid component to match the darker theme
+const TimeGrid: React.FC<TimeGridProps> = ({ columnIndex }) => {
+  const handleMouseDown = (e: React.MouseEvent): void => {
+    if (e.target instanceof Element && e.target.closest('.event-item')) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const startTime = getTimeFromY(y);
+    
+    setDragCreating({
+      startTime,
+      endTime: startTime,
+      column: columnIndex
+    });
   };
+
+  const handleMouseMove = (e: React.MouseEvent): void => {
+    if (!dragCreating) return;
+    
+    if (e.target instanceof Element && e.target.closest('.event-item')) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const currentTime = Math.max(0, Math.min(24, getTimeFromY(y)));
+    
+    setDragCreating(prev => prev ? {
+      ...prev,
+      endTime: currentTime
+    } : null);
+  };
+
+  const handleMouseUp = (): void => {
+    if (!dragCreating) return;
+
+    const start = Math.min(dragCreating.startTime, dragCreating.endTime);
+    const end = Math.max(dragCreating.startTime, dragCreating.endTime);
+    
+    if (end - start >= 0.25) {
+      const newEvent: CalendarEvent = {
+        id: Date.now().toString(),
+        title: "New Event",
+        type: "work",
+        start,
+        end,
+        column: columnIndex,
+        description: ""
+      };
+      const updatedEvents = [...events, newEvent];
+      setEvents(updatedEvents);
+      pushToHistory(updatedEvents);
+      setSelectedEvent(newEvent);
+    }
+    setDragCreating(null);
+  };
+
+  return (
+    <div 
+      className="relative flex-1 min-w-[200px] time-grid border-l border-gray-700 h-full grid-container"
+      onDragOver={(e) => handleDrag(e, columnIndex)}
+      onDrop={() => {
+        dragItem.current = null;
+        dragNode.current = null;
+      }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
+      {/* Time labels container */}
+      <div className="absolute left-0 w-12 h-full select-none">
+        <div className="h-16" /> {/* Empty first hour div */}
+        {Array.from({ length: 23 }, (_, i) => (
+          <div 
+            key={i + 1}
+            className="h-16 border-t border-gray-700 relative"
+          >
+            <div className="absolute left-2 -top-3 text-xs text-gray-400">
+              {`${(i + 1).toString().padStart(2, '0')}:00`}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Content area for events */}
+      <div className="absolute left-12 right-0 h-full">
+        <div className="h-16 border-t border-gray-700 relative" />
+        {Array.from({ length: 23 }, (_, i) => (
+          <div 
+            key={i + 1}
+            className="h-16 border-t border-gray-700 relative hover:bg-gray-800/30"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                const newEvent: CalendarEvent = {
+                  id: Date.now().toString(),
+                  title: "New Event",
+                  type: "work",
+                  start: i + 1,
+                  end: i + 2,
+                  column: columnIndex,
+                  description: ""
+                };
+                const updatedEvents = [...events, newEvent];
+                setEvents(updatedEvents);
+                pushToHistory(updatedEvents);
+                setSelectedEvent(newEvent);
+              }
+            }}
+          />
+        ))}
+        
+        {events
+          .filter(event => event.column === columnIndex)
+          .map(event => (
+            <EventComponent key={event.id} event={event} />
+          ))}
+
+        {dragCreating && dragCreating.column === columnIndex && (
+          <div
+            className="absolute right-2 bg-blue-900/30 border border-blue-500/50 rounded pointer-events-none"
+            style={{
+              left: '0',
+              top: `${Math.min(dragCreating.startTime, dragCreating.endTime) * 4}rem`,
+              height: `${Math.abs(dragCreating.endTime - dragCreating.startTime) * 4}rem`
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
   
   // Side Panel Component - Now always visible
   // Side Panel Component 
+// Side Panel Component with updated colors
 const SidePanel: React.FC = () => {
   // Use local component state for form inputs
   const [inputTitle, setInputTitle] = useState<string>(selectedEvent?.title || 'New Event');
@@ -497,7 +499,7 @@ const SidePanel: React.FC = () => {
     }
   };
   
-  // Handle click on the logo to save event
+  // Create a new event or update existing one
   const handleSaveEvent = (): void => {
     if (selectedEvent) {
       // Just save history for existing event
@@ -542,14 +544,14 @@ const SidePanel: React.FC = () => {
   };
 
   return (
-    <div className="w-80 bg-gray-800 border-l border-gray-700 p-4 flex flex-col h-full">
+    <div className="w-80 bg-[#222222] border border-gray-700 p-4 flex flex-col h-full">
       <div className="mb-4">
         <input 
           type="text"
           value={inputTitle}
           onChange={(e) => setInputTitle(e.target.value)}
           onBlur={() => selectedEvent && updateEvent('title', inputTitle)}
-          className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"
+          className="w-full bg-[#2A2A2A] border border-gray-700 rounded px-3 py-2"
           placeholder="New Event"
         />
       </div>
@@ -562,7 +564,7 @@ const SidePanel: React.FC = () => {
             value={inputStartTime}
             onChange={(e) => setInputStartTime(e.target.value)}
             onBlur={() => handleTimeUpdate('start', inputStartTime)}
-            className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
+            className="w-16 bg-[#2A2A2A] border border-gray-700 rounded px-2 py-1 text-center"
           />
           <span className="text-gray-400">→</span>
           <input 
@@ -570,7 +572,7 @@ const SidePanel: React.FC = () => {
             value={inputEndTime}
             onChange={(e) => setInputEndTime(e.target.value)}
             onBlur={() => handleTimeUpdate('end', inputEndTime)}
-            className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
+            className="w-16 bg-[#2A2A2A] border border-gray-700 rounded px-2 py-1 text-center"
           />
           <span className="text-gray-400 text-xs ml-1">
             ({getDurationDisplay()})
@@ -579,7 +581,7 @@ const SidePanel: React.FC = () => {
       </div>
 
       <div className="mb-4">
-        <div className="bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+        <div className="bg-[#2A2A2A] border border-gray-700 rounded px-3 py-2 text-sm">
           {date.toLocaleDateString('en-US', { 
             weekday: 'short',
             month: 'short', 
@@ -593,7 +595,7 @@ const SidePanel: React.FC = () => {
           value={inputDescription}
           onChange={(e) => setInputDescription(e.target.value)}
           onBlur={() => selectedEvent && updateEvent('description', inputDescription)}
-          className="w-full h-40 resize-none bg-gray-900 border border-gray-700 rounded px-3 py-2"
+          className="w-full h-40 resize-none bg-[#2A2A2A] border border-gray-700 rounded px-3 py-2"
           placeholder="Description"
         />
       </div>
@@ -605,12 +607,11 @@ const SidePanel: React.FC = () => {
         title="Push to calendar"
       >
         <img 
-    src="/logo.png" 
-    alt="Heikō" 
-    width="60" 
-    height="60" 
-  />
-
+          src="/logo.png" 
+          alt="Heikō" 
+          width="60" 
+          height="60" 
+        />
       </div>
     </div>
   );
@@ -677,11 +678,13 @@ const SidePanel: React.FC = () => {
   }, [events]);
 
   return (
-    <div className="h-screen bg-gray-900 text-white p-4 flex">
-      <div className="bg-gray-800 border border-gray-700 rounded-lg h-full flex flex-col flex-1">
+    <div className="h-screen bg-[#1A1A1A] text-white p-4 flex">
+      <div className="bg-[#222222] border border-gray-700 rounded-lg h-full flex flex-col flex-1">
+        {/* Header area - update border color */}
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+          {/* Rest of the header content remains the same */}
           <div className="flex items-center gap-4">
-          <Button 
+            <Button 
               variant="ghost"
               onClick={() => {
                 const newDate = new Date(date);
@@ -733,7 +736,7 @@ const SidePanel: React.FC = () => {
         </div>
       </div>
       
-      {/* Side panel - now always visible regardless of selected event */}
+      {/* Side panel - update background color */}
       <div className="side-panel ml-4">
         <SidePanel />
       </div>
