@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Day Planner",
-  description: "A day planner with multiple view comparison",
+  title: "Heikō",
+  description: "A day planner with a multiple view comparison function",
 };
 
 export default function RootLayout({
