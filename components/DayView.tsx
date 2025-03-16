@@ -2,13 +2,36 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, GripVertical, X, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 
-const formatTime = (time) => {
+// Define types for our data
+interface CalendarEvent {
+  id: string;
+  title: string;
+  type: string;
+  start: number;
+  end: number;
+  column: number;
+  description?: string;
+}
+
+interface DragCreatingState {
+  startTime: number;
+  endTime: number;
+  column: number;
+}
+
+interface ResizingEventState {
+  event: CalendarEvent;
+  position: 'top' | 'bottom';
+}
+
+// Utility functions with type annotations
+const formatTime = (time: number): string => {
   const hours = Math.floor(time);
   const minutes = Math.round((time % 1) * 60);
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
 
-const formatDuration = (duration) => {
+const formatDuration = (duration: number): string => {
   const hours = Math.floor(duration);
   const minutes = Math.round((duration % 1) * 60);
   if (hours === 0) {
@@ -19,7 +42,13 @@ const formatDuration = (duration) => {
   return `${hours}h ${minutes}m`;
 };
 
-const Button = ({ children, variant = 'default', ...props }) => (
+interface ButtonProps {
+  children: React.ReactNode;
+  variant?: 'default' | 'ghost' | 'success';
+  [key: string]: any;
+}
+
+const Button: React.FC<ButtonProps> = ({ children, variant = 'default', ...props }) => (
   <button 
     className={`px-4 py-2 rounded ${
       variant === 'ghost' 
@@ -34,16 +63,16 @@ const Button = ({ children, variant = 'default', ...props }) => (
   </button>
 );
 
-const DayView = () => {
-  const [date, setDate] = useState(new Date());
-  const [columns, setColumns] = useState(1);
-  const [events, setEvents] = useState([]);
-  const [history, setHistory] = useState([[]]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const [editingEventId, setEditingEventId] = useState(null);
-  const [resizingEvent, setResizingEvent] = useState(null);
-  const [dragCreating, setDragCreating] = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+const DayView: React.FC = () => {
+  const [date, setDate] = useState<Date>(new Date());
+  const [columns, setColumns] = useState<number>(1);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [history, setHistory] = useState<CalendarEvent[][]>([[]]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [resizingEvent, setResizingEvent] = useState<ResizingEventState | null>(null);
+  const [dragCreating, setDragCreating] = useState<DragCreatingState | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   
   // Default values for new event
   const defaultStartTime = 3.5; // 03:30
@@ -51,15 +80,15 @@ const DayView = () => {
   const defaultColumn = 0;
 
   // Form state for the side panel
-  const [title, setTitle] = useState('New Event');
-  const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState(formatTime(defaultStartTime));
-  const [endTime, setEndTime] = useState(formatTime(defaultEndTime));
+  const [title, setTitle] = useState<string>('New Event');
+  const [description, setDescription] = useState<string>('');
+  const [startTime, setStartTime] = useState<string>(formatTime(defaultStartTime));
+  const [endTime, setEndTime] = useState<string>(formatTime(defaultEndTime));
   
-  const dragItem = useRef(null);
-  const dragNode = useRef(null);
+  const dragItem = useRef<CalendarEvent | null>(null);
+  const dragNode = useRef<HTMLElement | null>(null);
 
-  const getTimeFromY = (y) => Math.floor(y / 64 * 2) / 2;
+  const getTimeFromY = (y: number): number => Math.floor(y / 64 * 2) / 2;
 
   // Initialize side panel with default values or selected event data
   useEffect(() => {
@@ -76,21 +105,21 @@ const DayView = () => {
     }
   }, [selectedEvent]);
 
-  const pushToHistory = (newEvents) => {
+  const pushToHistory = (newEvents: CalendarEvent[]): void => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newEvents);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
 
-  const handleDragStart = (e, event) => {
+  const handleDragStart = (e: React.DragEvent, event: CalendarEvent): void => {
     e.stopPropagation();
     dragItem.current = event;
-    dragNode.current = e.target;
+    dragNode.current = e.target as HTMLElement;
     e.dataTransfer.setData('text/plain', '');
   };
 
-  const handleDrag = (e, columnIndex) => {
+  const handleDrag = (e: React.DragEvent, columnIndex: number): void => {
     e.preventDefault();
     if (!dragItem.current) return;
     
@@ -100,13 +129,13 @@ const DayView = () => {
     
     const duration = dragItem.current.end - dragItem.current.start;
     setEvents(prev => prev.map(ev => 
-      ev.id === dragItem.current.id 
+      ev.id === dragItem.current?.id 
         ? { ...ev, start: time, end: time + duration, column: columnIndex }
         : ev
     ));
   };
 
-  const handleResize = (e) => {
+  const handleResize = (e: MouseEvent): void => {
     if (!resizingEvent) return;
     
     const gridElement = document.querySelector('.time-grid');
@@ -136,10 +165,18 @@ const DayView = () => {
     }
   };
 
-  const EventComponent = ({ event }) => (
+  interface EventComponentProps {
+    event: CalendarEvent;
+  }
+
+  const EventComponent: React.FC<EventComponentProps> = ({ event }) => (
     <div
       draggable
       onDragStart={(e) => handleDragStart(e, event)}
+      onDragEnd={() => {
+        dragItem.current = null;
+        dragNode.current = null;
+      }}
       className={`absolute right-2 rounded-md text-sm group event-item
         ${selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-blue-400' : ''}
         ${event.type === 'work' ? 'bg-green-900/50 border-l-4 border-green-700' : 'bg-blue-900/50 border-l-4 border-blue-700'}`}
@@ -252,9 +289,13 @@ const DayView = () => {
     </div>
   );
 
-  const TimeGrid = ({ columnIndex }) => {
-    const handleMouseDown = (e) => {
-      if (e.target.closest('.event-item')) return;
+  interface TimeGridProps {
+    columnIndex: number;
+  }
+
+  const TimeGrid: React.FC<TimeGridProps> = ({ columnIndex }) => {
+    const handleMouseDown = (e: React.MouseEvent): void => {
+      if (e.target instanceof Element && e.target.closest('.event-item')) return;
       
       const rect = e.currentTarget.getBoundingClientRect();
       const y = e.clientY - rect.top;
@@ -267,29 +308,29 @@ const DayView = () => {
       });
     };
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: React.MouseEvent): void => {
       if (!dragCreating) return;
       
-      if (e.target.closest('.event-item')) return;
+      if (e.target instanceof Element && e.target.closest('.event-item')) return;
       
       const rect = e.currentTarget.getBoundingClientRect();
       const y = e.clientY - rect.top;
       const currentTime = Math.max(0, Math.min(24, getTimeFromY(y)));
       
-      setDragCreating(prev => ({
+      setDragCreating(prev => prev ? {
         ...prev,
         endTime: currentTime
-      }));
+      } : null);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (): void => {
       if (!dragCreating) return;
 
       const start = Math.min(dragCreating.startTime, dragCreating.endTime);
       const end = Math.max(dragCreating.startTime, dragCreating.endTime);
       
       if (end - start >= 0.25) {
-        const newEvent = {
+        const newEvent: CalendarEvent = {
           id: Date.now().toString(),
           title: "New Event",
           type: "work",
@@ -298,8 +339,9 @@ const DayView = () => {
           column: columnIndex,
           description: ""
         };
-        setEvents(prev => [...prev, newEvent]);
-        pushToHistory([...events, newEvent]);
+        const updatedEvents = [...events, newEvent];
+        setEvents(updatedEvents);
+        pushToHistory(updatedEvents);
         setSelectedEvent(newEvent);
       }
       setDragCreating(null);
@@ -309,6 +351,10 @@ const DayView = () => {
       <div 
         className="relative flex-1 min-w-[200px] time-grid border-l border-gray-700 h-full grid-container"
         onDragOver={(e) => handleDrag(e, columnIndex)}
+        onDrop={() => {
+          dragItem.current = null;
+          dragNode.current = null;
+        }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -338,7 +384,7 @@ const DayView = () => {
               className="h-16 border-t border-gray-700 relative"
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
-                  const newEvent = {
+                  const newEvent: CalendarEvent = {
                     id: Date.now().toString(),
                     title: "New Event",
                     type: "work",
@@ -347,8 +393,9 @@ const DayView = () => {
                     column: columnIndex,
                     description: ""
                   };
-                  setEvents(prev => [...prev, newEvent]);
-                  pushToHistory([...events, newEvent]);
+                  const updatedEvents = [...events, newEvent];
+                  setEvents(updatedEvents);
+                  pushToHistory(updatedEvents);
                   setSelectedEvent(newEvent);
                 }
               }}
@@ -377,199 +424,199 @@ const DayView = () => {
   };
   
   // Side Panel Component - Now always visible
-  // Side Panel Component - Copy this version directly
-const SidePanel = () => {
-  // Use local component state for form inputs
-  const [inputTitle, setInputTitle] = useState(selectedEvent?.title || 'New Event');
-  const [inputDescription, setInputDescription] = useState(selectedEvent?.description || '');
-  const [inputStartTime, setInputStartTime] = useState(selectedEvent ? formatTime(selectedEvent.start) : formatTime(3.5));
-  const [inputEndTime, setInputEndTime] = useState(selectedEvent ? formatTime(selectedEvent.end) : formatTime(6.0));
+  const SidePanel: React.FC = () => {
+    // Use local component state for form inputs
+    const [inputTitle, setInputTitle] = useState<string>(selectedEvent?.title || 'New Event');
+    const [inputDescription, setInputDescription] = useState<string>(selectedEvent?.description || '');
+    const [inputStartTime, setInputStartTime] = useState<string>(selectedEvent ? formatTime(selectedEvent.start) : formatTime(3.5));
+    const [inputEndTime, setInputEndTime] = useState<string>(selectedEvent ? formatTime(selectedEvent.end) : formatTime(6.0));
 
-  // Sync form fields when selected event changes
-  useEffect(() => {
-    if (selectedEvent) {
-      setInputTitle(selectedEvent.title || '');
-      setInputDescription(selectedEvent.description || '');
-      setInputStartTime(formatTime(selectedEvent.start));
-      setInputEndTime(formatTime(selectedEvent.end));
-    } else {
-      setInputTitle('New Event');
-      setInputDescription('');
-      setInputStartTime(formatTime(3.5));
-      setInputEndTime(formatTime(6.0));
-    }
-  }, [selectedEvent?.id]);
-
-  // This function updates the selected event
-  const updateEvent = (field, value) => {
-    if (!selectedEvent) return;
-    
-    setEvents(prev => {
-      const newEvents = prev.map(ev => 
-        ev.id === selectedEvent.id ? { ...ev, [field]: value } : ev
-      );
-      
-      // Find the updated event
-      const updatedEvent = newEvents.find(ev => ev.id === selectedEvent.id);
-      
-      // Update the selected event reference
-      if (updatedEvent) {
-        setSelectedEvent(updatedEvent);
+    // Sync form fields when selected event changes
+    useEffect(() => {
+      if (selectedEvent) {
+        setInputTitle(selectedEvent.title || '');
+        setInputDescription(selectedEvent.description || '');
+        setInputStartTime(formatTime(selectedEvent.start));
+        setInputEndTime(formatTime(selectedEvent.end));
+      } else {
+        setInputTitle('New Event');
+        setInputDescription('');
+        setInputStartTime(formatTime(3.5));
+        setInputEndTime(formatTime(6.0));
       }
+    }, [selectedEvent?.id]);
+
+    // This function updates the selected event
+    const updateEvent = (field: string, value: any): void => {
+      if (!selectedEvent) return;
       
-      return newEvents;
-    });
-  };
-  
-  // Parse time string to decimal value
-  const parseTimeString = (timeStr) => {
-    const timeMatch = timeStr.match(/^(\d{1,2}):(\d{1,2})$/);
-    if (!timeMatch) return null;
+      setEvents(prev => {
+        const newEvents = prev.map(ev => 
+          ev.id === selectedEvent.id ? { ...ev, [field]: value } : ev
+        );
+        
+        // Find the updated event
+        const updatedEvent = newEvents.find(ev => ev.id === selectedEvent.id);
+        
+        // Update the selected event reference
+        if (updatedEvent) {
+          setSelectedEvent(updatedEvent);
+        }
+        
+        return newEvents;
+      });
+    };
     
-    const hours = parseInt(timeMatch[1], 10);
-    const minutes = parseInt(timeMatch[2], 10);
+    // Parse time string to decimal value
+    const parseTimeString = (timeStr: string): number | null => {
+      const timeMatch = timeStr.match(/^(\d{1,2}):(\d{1,2})$/);
+      if (!timeMatch) return null;
+      
+      const hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      
+      return hours + (minutes / 60);
+    };
     
-    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-    
-    return hours + (minutes / 60);
-  };
-  
-  // Handle time field changes
-  const handleTimeUpdate = (field, timeString) => {
-    const timeValue = parseTimeString(timeString);
-    if (timeValue === null) return;
-    
-    if (selectedEvent) {
-      if (field === 'start') {
-        if (timeValue >= selectedEvent.end) return;
-        updateEvent('start', timeValue);
-      } else if (field === 'end') {
-        if (timeValue <= selectedEvent.start) return;
-        updateEvent('end', timeValue);
+    // Handle time field changes
+    const handleTimeUpdate = (field: string, timeString: string): void => {
+      const timeValue = parseTimeString(timeString);
+      if (timeValue === null) return;
+      
+      if (selectedEvent) {
+        if (field === 'start') {
+          if (timeValue >= selectedEvent.end) return;
+          updateEvent('start', timeValue);
+        } else if (field === 'end') {
+          if (timeValue <= selectedEvent.start) return;
+          updateEvent('end', timeValue);
+        }
       }
-    }
-  };
-  
-  // Create a new event or update existing one
-  const handleSaveEvent = () => {
-    if (selectedEvent) {
-      // Just save history for existing event
-      pushToHistory([...events]);
-    } else {
-      // Create a new event
-      const startValue = parseTimeString(inputStartTime);
-      const endValue = parseTimeString(inputEndTime);
-      
-      if (startValue === null || endValue === null || startValue >= endValue) return;
-      
-      const newEvent = {
-        id: Date.now().toString(),
-        title: inputTitle || 'New Event',
-        type: 'work',
-        start: startValue,
-        end: endValue,
-        column: 0, // Default column
-        description: inputDescription || ''
-      };
-      
-      setEvents(prev => [...prev, newEvent]);
-      pushToHistory([...events, newEvent]);
-      setSelectedEvent(newEvent);
-    }
-  };
+    };
+    
+    // Create a new event or update existing one
+    const handleSaveEvent = (): void => {
+      if (selectedEvent) {
+        // Just save history for existing event
+        pushToHistory([...events]);
+      } else {
+        // Create a new event
+        const startValue = parseTimeString(inputStartTime);
+        const endValue = parseTimeString(inputEndTime);
+        
+        if (startValue === null || endValue === null || startValue >= endValue) return;
+        
+        const newEvent: CalendarEvent = {
+          id: Date.now().toString(),
+          title: inputTitle || 'New Event',
+          type: 'work',
+          start: startValue,
+          end: endValue,
+          column: 0, // Default column
+          description: inputDescription || ''
+        };
+        
+        const updatedEvents = [...events, newEvent];
+        setEvents(updatedEvents);
+        pushToHistory(updatedEvents);
+        setSelectedEvent(newEvent);
+      }
+    };
 
-  // Calculate duration display
-  const getDurationDisplay = () => {
-    if (selectedEvent) {
-      return formatDuration(selectedEvent.end - selectedEvent.start);
-    } else {
-      const startValue = parseTimeString(inputStartTime);
-      const endValue = parseTimeString(inputEndTime);
-      
-      if (startValue === null || endValue === null) return '';
-      
-      const duration = endValue - startValue;
-      return duration > 0 ? formatDuration(duration) : '';
-    }
-  };
+    // Calculate duration display
+    const getDurationDisplay = (): string => {
+      if (selectedEvent) {
+        return formatDuration(selectedEvent.end - selectedEvent.start);
+      } else {
+        const startValue = parseTimeString(inputStartTime);
+        const endValue = parseTimeString(inputEndTime);
+        
+        if (startValue === null || endValue === null) return '';
+        
+        const duration = endValue - startValue;
+        return duration > 0 ? formatDuration(duration) : '';
+      }
+    };
 
-  return (
-    <div className="w-80 bg-gray-800 border-l border-gray-700 p-4 flex flex-col h-full">
-      <div className="mb-4">
-        <input 
-          type="text"
-          value={inputTitle}
-          onChange={(e) => setInputTitle(e.target.value)}
-          onBlur={() => selectedEvent && updateEvent('title', inputTitle)}
-          className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"
-          placeholder="New Event"
-        />
-      </div>
-      
-      <div className="flex items-center mb-4">
-        <Clock className="h-5 w-5 mr-2 text-gray-400" />
-        <div className="flex items-center gap-1">
+    return (
+      <div className="w-80 bg-gray-800 border-l border-gray-700 p-4 flex flex-col h-full">
+        <div className="mb-4">
           <input 
             type="text"
-            value={inputStartTime}
-            onChange={(e) => setInputStartTime(e.target.value)}
-            onBlur={() => handleTimeUpdate('start', inputStartTime)}
-            className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
+            value={inputTitle}
+            onChange={(e) => setInputTitle(e.target.value)}
+            onBlur={() => selectedEvent && updateEvent('title', inputTitle)}
+            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2"
+            placeholder="New Event"
           />
-          <span className="text-gray-400">→</span>
-          <input 
-            type="text"
-            value={inputEndTime}
-            onChange={(e) => setInputEndTime(e.target.value)}
-            onBlur={() => handleTimeUpdate('end', inputEndTime)}
-            className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
-          />
-          <span className="text-gray-400 text-xs ml-1">
-            ({getDurationDisplay()})
-          </span>
         </div>
-      </div>
+        
+        <div className="flex items-center mb-4">
+          <Clock className="h-5 w-5 mr-2 text-gray-400" />
+          <div className="flex items-center gap-1">
+            <input 
+              type="text"
+              value={inputStartTime}
+              onChange={(e) => setInputStartTime(e.target.value)}
+              onBlur={() => handleTimeUpdate('start', inputStartTime)}
+              className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
+            />
+            <span className="text-gray-400">→</span>
+            <input 
+              type="text"
+              value={inputEndTime}
+              onChange={(e) => setInputEndTime(e.target.value)}
+              onBlur={() => handleTimeUpdate('end', inputEndTime)}
+              className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-center"
+            />
+            <span className="text-gray-400 text-xs ml-1">
+              ({getDurationDisplay()})
+            </span>
+          </div>
+        </div>
 
-      <div className="mb-4">
-        <div className="bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
-          {date.toLocaleDateString('en-US', { 
-            weekday: 'short',
-            month: 'short', 
-            day: 'numeric'
-          })}
+        <div className="mb-4">
+          <div className="bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm">
+            {date.toLocaleDateString('en-US', { 
+              weekday: 'short',
+              month: 'short', 
+              day: 'numeric'
+            })}
+          </div>
         </div>
+        
+        <div className="flex-grow mb-4">
+          <textarea 
+            value={inputDescription}
+            onChange={(e) => setInputDescription(e.target.value)}
+            onBlur={() => selectedEvent && updateEvent('description', inputDescription)}
+            className="w-full h-40 resize-none bg-gray-900 border border-gray-700 rounded px-3 py-2"
+            placeholder="Description"
+          />
+        </div>
+        
+        <Button 
+          variant="success"
+          onClick={handleSaveEvent}
+          className="w-full"
+        >
+          Push to calendar
+        </Button>
       </div>
-      
-      <div className="flex-grow mb-4">
-        <textarea 
-          value={inputDescription}
-          onChange={(e) => setInputDescription(e.target.value)}
-          onBlur={() => selectedEvent && updateEvent('description', inputDescription)}
-          className="w-full h-40 resize-none bg-gray-900 border border-gray-700 rounded px-3 py-2"
-          placeholder="Description"
-        />
-      </div>
-      
-      <Button 
-        variant="success"
-        onClick={handleSaveEvent}
-        className="w-full"
-      >
-        Push to calendar
-      </Button>
-    </div>
-  );
-};
+    );
+  };
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent): void => {
       if (resizingEvent) {
         e.preventDefault();
         handleResize(e);
       }
     };
 
-    const handleMouseUp = (e) => {
+    const handleMouseUp = (e: MouseEvent): void => {
       if (resizingEvent) {
         e.preventDefault();
         pushToHistory([...events]);
@@ -577,7 +624,7 @@ const SidePanel = () => {
       }
     };
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         if (historyIndex > 0) {
